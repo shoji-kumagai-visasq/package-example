@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "packaging-example"
+description = "Packaging example repository for Python"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Shoji Kumagai", email = "shoji.kumagai@visasq.com"}
+]
+license = {file = "LICENSE"}
+keywords = ["packaging", "example", "python"]
+classifiers = [
+    "Private :: Do not upload",
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dynamic = ["version"]
+dependencies = [
+    "click>=8.1.7",
+    "dataclasses-json>=0.6.7",
+    "packaging>=24.2",
+    "rich>=13.9.4",
+]
+
+[project.optional-dependencies]
+test = ["tox"]
+package = ["build", "twine"]
+
+[project.scripts]
+example = "example.core:main"
+
+[tool.setuptools.packages]
+find = {}
+
+[tool.setuptools.dynamic]
+version = {attr = "example.__version__"}
