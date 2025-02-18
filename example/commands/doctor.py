@@ -18,7 +18,7 @@ import json
 import subprocess
 import time
 from contextlib import contextmanager
-from typing import Callable, Generator, TypeAlias
+from typing import Generator
 
 import rich
 from packaging import version
@@ -26,9 +26,9 @@ from rich.live import Live
 from rich.table import Table
 from rich.theme import Theme
 
-from .constants import GCP_PROJECT_NAME, MACOS
-from .paths import DOCKER_CONFIG_JSON, GCLOUD_ADC_JSON
-from .termui import Emoji
+from ..constants import GCP_PROJECT_NAME, MACOS
+from ..paths import DOCKER_CONFIG_JSON, GCLOUD_ADC_JSON
+from ..termui import Emoji
 
 
 def command_exists(command: str) -> list[str | Emoji]:
@@ -66,7 +66,7 @@ VERSION_COMMAND_MAPPING: dict[str, str] = {
     "docker": "docker --version | awk '{ print $3; }' | tr -d ','",
     "docker compose": "docker compose version | awk '{ print $4; }' | sed -e 's/-.*$//g' -e 's/v//g'",
     "mutagen": "mutagen --version | awk '{ print $3; }'",
-    "gcloud": "gcloud --version | grep SDK | awk '{ print $4; }'",
+    "gcloud": "gcloud --version 2>/dev/null | grep SDK | awk '{ print $4; }'",
 }
 
 
@@ -248,51 +248,6 @@ def check_cloud_resource_manager_enabled() -> list[str | Emoji]:
         ]
 
 
-TestConfigExtra: TypeAlias = list[tuple[Callable, tuple[str, ...] | None]]
-TestConfig: TypeAlias = dict[str, bool | TestConfigExtra]
-Tool: TypeAlias = str
-
-TOOL_TEST_CONFIG_MAPPING: dict[Tool, TestConfig] = {
-    "xcode-select": {"platform": MACOS},
-    "brew": {"platform": MACOS},
-    "make": {},
-    "ssh": {
-        "extra": [
-            (check_ssh_access_on_github, None),
-        ],
-    },
-    "jq": {},
-    "pgrep": {},
-    "peco": {},
-    "pipx": {},
-    "gh": {
-        "extra": [
-            (version_satisfied, ("gh", "2.0.0")),
-            (check_gh_auth_login, None),
-        ],
-    },
-    "docker": {
-        "extra": [
-            (version_satisfied, ("docker", "20.10.7")),
-            (version_satisfied, ("docker compose", "1.29.2")),
-            (check_docker_daemon, None),
-        ],
-    },
-    "mutagen": {
-        "extra": [
-            (version_satisfied, ("mutagen", "0.13.0")),
-        ],
-    },
-    "gcloud": {
-        "extra": [
-            (version_satisfied, ("gcloud", "379.0.0")),
-            (check_configure_docker, None),
-            (check_application_credentials, None),
-            (check_cloud_resource_manager_enabled, None),
-        ],
-    },
-}
-
 DEFAULT_THEME = {
     "primary": "cyan",
     "success": "green",
@@ -323,17 +278,78 @@ def run() -> None:
     table.add_column("Result", no_wrap=True)
     table.add_column("Details", no_wrap=True)
 
-    with Live(table, console=console, screen=False, refresh_per_second=20):
-        for tool, test_config in TOOL_TEST_CONFIG_MAPPING.items():
-            # コマンドの実在確認
-            # プラットフォームによって実行可否が異なるケースは platform の bool 値を確認する
-            platform = test_config.get("platform")
-            if platform is None or platform:
-                with beat(1):
-                    table.add_row(*command_exists(tool))
+    table.box = rich.box.SIMPLE_HEAD
+    table.pad_edge = False
 
-            # 追加確認項目の実行
-            if extras := test_config.get("extra"):
-                for func, args in extras:
-                    with beat(1):
-                        table.add_row(*(func(*args) if args else func()))
+    console.clear()
+
+    with Live(table, console=console, screen=False, refresh_per_second=15):
+        if MACOS:
+            with beat(10):
+                command_exists("xcode-select")
+
+            with beat(10):
+                command_exists("brew")
+
+        with beat(10):
+            command_exists("make")
+
+        with beat(10):
+            command_exists("ssh")
+
+        with beat(10):
+            check_ssh_access_on_github()
+
+        with beat(10):
+            command_exists("jq")
+
+        with beat(10):
+            command_exists("pgrep")
+
+        with beat(10):
+            command_exists("peco")
+
+        with beat(10):
+            command_exists("pipx")
+
+        with beat(10):
+            command_exists("gh")
+
+        with beat(10):
+            version_satisfied("gh", "2.0.0")
+
+        with beat(10):
+            check_gh_auth_login()
+
+        with beat(10):
+            command_exists("mutagen")
+
+        with beat(10):
+            version_satisfied("mutagen", "0.13.0")
+
+        with beat(10):
+            command_exists("docker")
+
+        with beat(10):
+            version_satisfied("docker", "20.10.7")
+
+        with beat(10):
+            version_satisfied("docker compose", "1.29.2")
+
+        with beat(10):
+            check_docker_daemon()
+
+        with beat(10):
+            command_exists("gcloud")
+
+        with beat(10):
+            version_satisfied("gcloud", "379.0.0")
+
+        with beat(10):
+            check_configure_docker()
+
+        with beat(10):
+            check_application_credentials()
+
+        with beat(10):
+            check_cloud_resource_manager_enabled()

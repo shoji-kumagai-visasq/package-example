@@ -22,9 +22,9 @@ def cli(debug: bool) -> None:
 
 @cli.command()
 def doctor():
-    from .doctor import run
+    from .commands import doctor
 
-    run()
+    doctor.run()
 
 
 def main():
